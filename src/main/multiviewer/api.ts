@@ -15,8 +15,10 @@ import { getConfig } from "../ipc/config";
 import {
   EventType,
   eventTypeReadableMap,
+  DriverAudioEventType,
 } from "../../shared/config/config_types";
 import { eventHandler } from "../lightController/eventHandler";
+import { handleDriverAudioEvent } from "../sounds/driverAudio";
 
 export interface ILiveTimingData {
   RaceControlMessages: IRaceControlMessages | undefined;
@@ -34,6 +36,8 @@ let currentFastestLapTimeSeconds: number | undefined = undefined;
 let currentQualifyingPart: number | undefined = undefined;
 let previousTrackStatus: ITrackStatus | undefined = undefined;
 let previousSessionStatus: ISessionStatus | undefined = undefined;
+let previousTimingDataLines: ITimingData["Lines"] | undefined = undefined;
+let previousSessionKey: number | undefined = undefined;
 let processedRaceControlMessages: IRaceControlMessages = {
   Messages: [],
 };
@@ -125,21 +129,27 @@ function checkForNewFastestLap(
   _TimingStats: ITimingStats["Lines"],
   TimingData: ITimingData["Lines"],
 ) {
-  const fastestLapTimeSeconds = Object.values(TimingData ?? {})
-    .map((line) => {
-      if (line.KnockedOut === true) return "";
-      if (line.Retired === true) return "";
-      if (line.Stopped === true) return "";
-      // if (TimingStats[line.RacingNumber]?.PersonalBestLapTime.Position !== 1) {
-      //   return "";
-      // }
-      return line.BestLapTime?.Value;
-    })
-    .filter((lapTime) => lapTime !== "")
-    .map((lapTime) => ({ lapTime, parsed: parseLapTime(lapTime) }))
-    .sort((a, b) => a.parsed - b.parsed)[0]?.parsed;
+  const fastestLap = Object.entries(TimingData ?? {})
+    .map(([driverNumber, line]) => {
+      if (line.KnockedOut === true) return undefined;
+      if (line.Retired === true) return undefined;
+      if (line.Stopped === true) return undefined;
 
-  if (fastestLapTimeSeconds === undefined) return;
+      const lapTime = line.BestLapTime?.Value;
+      if (!lapTime) return undefined;
+      return { driverNumber, lapTime, parsed: parseLapTime(lapTime) };
+    })
+    .filter(
+      (
+        entry,
+      ): entry is { driverNumber: string; lapTime: string; parsed: number } =>
+        entry !== undefined,
+    )
+    .sort((a, b) => a.parsed - b.parsed)[0];
+
+  if (!fastestLap) return;
+
+  const fastestLapTimeSeconds = fastestLap.parsed;
 
   if (
     typeof currentFastestLapTimeSeconds === "number" &&
@@ -150,6 +160,15 @@ function checkForNewFastestLap(
 
   if (typeof currentFastestLapTimeSeconds === "number") {
     currentFastestLapTimeSeconds = fastestLapTimeSeconds;
+    handleDriverAudioEvent({
+      driverNumber: fastestLap.driverNumber,
+      eventType: DriverAudioEventType.FastestLap,
+    }).catch((error) =>
+      log.warn(
+        `Failed to play driver sound for ${fastestLap.driverNumber}`,
+        error,
+      ),
+    );
     newEventHandler(EventType.FastestLap);
   } else {
     currentFastestLapTimeSeconds = fastestLapTimeSeconds;
@@ -193,6 +212,36 @@ function checkForTrackStatusChange(
   ) {
     newEventHandler(EventType.SessionEnded);
   }
+}
+
+function checkForDriverPositionGain(TimingData: ITimingData["Lines"]) {
+  if (!TimingData) return;
+
+  if (!previousTimingDataLines) {
+    previousTimingDataLines = TimingData;
+    return;
+  }
+
+  Object.entries(TimingData).forEach(([driverNumber, line]) => {
+    const previousLine = previousTimingDataLines?.[driverNumber];
+    if (!previousLine) return;
+
+    const previousPosition = parseInt(previousLine.Position, 10);
+    const currentPosition = parseInt(line.Position, 10);
+
+    if (Number.isNaN(previousPosition) || Number.isNaN(currentPosition)) return;
+
+    if (currentPosition < previousPosition) {
+      handleDriverAudioEvent({
+        driverNumber,
+        eventType: DriverAudioEventType.PositionGain,
+      }).catch((error) =>
+        log.warn(`Failed to play driver sound for ${driverNumber}`, error),
+      );
+    }
+  });
+
+  previousTimingDataLines = TimingData;
 }
 
 function checkForNewEventsInRaceControlMessages(
@@ -388,6 +437,16 @@ export function startLiveTimingDataPolling() {
   setInterval(async () => {
     const liveTimingData = await fetchMultiViewerLiveTimingData();
     if (!liveTimingData) return;
+
+    if (previousSessionKey !== liveTimingData.SessionInfo.Key) {
+      previousSessionKey = liveTimingData.SessionInfo.Key;
+      previousTimingDataLines = undefined;
+      currentFastestLapTimeSeconds = undefined;
+      currentQualifyingPart = undefined;
+      processedRaceControlMessages = { Messages: [] };
+      previousTrackStatus = undefined;
+      previousSessionStatus = undefined;
+    }
     liveTimingState = liveTimingData;
 
     checkForNewQualifyingPart();
@@ -401,6 +460,7 @@ export function startLiveTimingDataPolling() {
       liveTimingData.SessionStatus,
       previousSessionStatus,
     );
+    checkForDriverPositionGain(liveTimingData.TimingData.Lines);
     checkForNewEventsInRaceControlMessages(liveTimingData.RaceControlMessages);
   }, 500);
 }

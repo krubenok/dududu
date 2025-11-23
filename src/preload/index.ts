@@ -4,6 +4,7 @@ import { loggerAPI } from "./logger";
 import { appInfoAPI } from "./appInfo";
 import { utilsAPI } from "./utils";
 import { eventManagerAPI } from "./eventManager";
+import { driverAudioAPI } from "./driverAudio";
 import { integrationsAPI } from "./integrations";
 
 export const f1mvli = {
@@ -15,6 +16,7 @@ export const f1mvli = {
   platform: process.platform,
   arch: process.arch,
   eventManager: eventManagerAPI,
+  driverAudio: driverAudioAPI,
   integrations: integrationsAPI,
 };
 

@@ -39,6 +39,12 @@ export const eventTypeReadableMap: Record<EventType, string> = {
   DriveThroughPenalty: "Drive Through Penalty",
 };
 
+export const driverAudioEventReadableMap: Record<DriverAudioEventType, string> =
+  {
+    FastestLap: "Fastest lap",
+    PositionGain: "Position gain",
+  };
+
 export enum EventType {
   GreenFlag = "GreenFlag",
   YellowFlag = "YellowFlag",
@@ -80,6 +86,11 @@ export enum EventType {
   DriveThroughPenalty = "DriveThroughPenalty",
 }
 
+export enum DriverAudioEventType {
+  FastestLap = "FastestLap",
+  PositionGain = "PositionGain",
+}
+
 export const actionTypeReadableMap: Record<ActionType, string> = {
   On: "On",
   Off: "Off",
@@ -113,6 +124,15 @@ export interface Event {
   actions: Action[];
   goBackToStatic?: boolean;
   amount: number;
+}
+
+export interface DriverAudioAlert {
+  id: number;
+  driverNumber: string;
+  driverName?: string;
+  soundFilePath?: string;
+  events: DriverAudioEventType[];
+  enabled: boolean;
 }
 
 export interface IConfig {
@@ -173,6 +193,7 @@ export interface IConfig {
   otaConfigFetchJitter: number;
   debugMode: boolean;
   analytics: boolean;
+  driverAudioAlerts: DriverAudioAlert[];
 }
 
 export interface IOTAConfigPayload {

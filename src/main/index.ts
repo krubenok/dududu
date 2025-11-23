@@ -18,6 +18,7 @@ import { registerLoggerIPCHandlers } from "./ipc/logger";
 import { registerAppInfoIPCHandlers } from "./ipc/appInfo";
 import { startLiveTimingDataPolling } from "./multiviewer/api";
 import { registerEventManagerIPCHandlers } from "./ipc/eventManager";
+import { registerDriverAudioIPCHandlers } from "./ipc/driverAudio";
 import { registerIntegrationsIPCHandlers } from "./ipc/integrations";
 import { initializeIntegrations } from "./initIntegrations";
 import { handleRegisterUser, handleUserActiveExit } from "./analytics/api";
@@ -129,6 +130,7 @@ let _utilsIPCCleanup: () => void;
 let _loggerIPCCleanup: () => void;
 let _appInfoIPCCleanup: () => void;
 let _eventManagerIPCCleanup: () => void;
+let _driverAudioIPCCleanup: () => void;
 let _integrationsIPCCleanup: () => void;
 
 app.whenReady().then(onReady);
@@ -142,6 +144,7 @@ function onReady() {
   _loggerIPCCleanup = registerLoggerIPCHandlers();
   _appInfoIPCCleanup = registerAppInfoIPCHandlers();
   _eventManagerIPCCleanup = registerEventManagerIPCHandlers();
+  _driverAudioIPCCleanup = registerDriverAudioIPCHandlers();
   _integrationsIPCCleanup = registerIntegrationsIPCHandlers();
   autoUpdater.forceDevUpdateConfig = false;
   autoUpdater.autoDownload = false;

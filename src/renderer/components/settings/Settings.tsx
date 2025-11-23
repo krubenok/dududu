@@ -57,6 +57,7 @@ import { GlobalMaxBrightnessSlider } from "./GlobalMaxBrightnessSlider";
 import { GoBackToStaticDelayInput } from "./GoBackToStaticDelayInput";
 import { GoBackToStaticBrightnessInput } from "./GoBackToStaticBrightnessInput";
 import { GoBackToStaticColorChangeButton } from "./GoBackToStaticColorChangeButton";
+import { DriverAudioSettings } from "./DriverAudioSettings";
 
 interface ISettings extends SettingsGroupProps {
   type?: "normal" | "experimental" | "debug";
@@ -136,6 +137,14 @@ export function Settings() {
             "Here you can enhance your experience by customizing what happens on certain events.",
           configKeys: ["events"],
           input: <EventSettings />,
+        },
+        {
+          type: "setting",
+          title: "Driver audio alerts",
+          description:
+            "Choose which drivers and events should trigger a sound notification.",
+          configKeys: ["driverAudioAlerts"],
+          input: <DriverAudioSettings />,
         },
       ],
     },

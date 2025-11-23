@@ -158,6 +158,7 @@ export const defaultConfig: IConfig = {
       amount: 1,
     },
   ],
+  driverAudioAlerts: [],
   globalMaxBrightness: 100,
   goBackToStaticBrightness: 70,
   goBackToStaticDelay: 3000,
